@@ -2,17 +2,17 @@
   "name": "infinite-solutions",
   "owner": {
     "name": "Michael Ludden",
-    "url": "https://github.com/infinite-solutions-group/cowork-studio-plugin"
+    "url": "https://github.com/infinite-solutions-group/cowork-vault-plugin"
   },
   "metadata": {
-    "description": "Plugins from Infinite Solutions — starting with Cowork Studio."
+    "description": "Plugins from Infinite Solutions — starting with Cowork Vault."
   },
   "plugins": [
     {
-      "name": "cowork-studio",
-      "source": "./plugins/cowork-studio",
-      "description": "Turns a folder of Markdown agent prompts into a structured Cowork vault: governance docs, normalized skills, memory layout, scheduled tasks, and a 7-skill starter pack so the user has something working in the first thirty minutes.",
-      "version": "0.6.0",
+      "name": "cowork-vault",
+      "source": "./plugins/cowork-vault",
+      "description": "Turns a folder of Markdown agent prompts into a structured Cowork vault: governance docs, normalized skills, memory layout, scheduled tasks, and a 7-skill starter pack so the user has something working in the first thirty minutes. Optional realtor-pack adds three real-estate transaction skills.",
+      "version": "0.7.0",
       "author": {
         "name": "Michael Ludden"
       }

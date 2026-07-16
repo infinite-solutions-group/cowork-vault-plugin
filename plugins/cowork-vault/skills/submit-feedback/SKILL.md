@@ -1,6 +1,6 @@
 ---
 name: submit-feedback
-description: Sends bug reports, feature requests, and general feedback about Cowork Studio directly to the maintainer. Creates a GitHub issue privately on the user's behalf — they don't need a GitHub account or to leave Cowork. Use when the user says "report a bug", "send feedback", "this is broken", "I have a suggestion", "tell the maintainer", or "report this issue".
+description: Sends bug reports, feature requests, and general feedback about Cowork Vault directly to the maintainer. Creates a GitHub issue privately on the user's behalf — they don't need a GitHub account or to leave Cowork. Use when the user says "report a bug", "send feedback", "this is broken", "I have a suggestion", "tell the maintainer", or "report this issue".
 ---
 
 # submit-feedback
@@ -8,12 +8,12 @@ description: Sends bug reports, feature requests, and general feedback about Cow
 The user wants to tell the maintainer something went wrong, something
 could be better, or something specific isn't working. This skill captures
 their report and files it as a GitHub issue on
-`infinite-solutions-group/cowork-studio` via a Cloudflare Worker — the user never
+`infinite-solutions-group/cowork-vault` via a Cloudflare Worker — the user never
 sees or touches GitHub themselves.
 
 ## When to use
 
-- "Report a bug in Cowork Studio"
+- "Report a bug in Cowork Vault"
 - "Tell the maintainer that X isn't working"
 - "I have a suggestion / feature request"
 - "Send Mike feedback"
@@ -56,14 +56,14 @@ show them the title + body you're about to submit.
    verbatim. Ask: "Ready to send this to the maintainer?"
 
 3. **On confirmation, POST to the feedback Worker.** The Worker URL is
-   `https://cowork-studio-feedback.michael-ludden.workers.dev` (the
+   `https://cowork-vault-feedback.michael-ludden.workers.dev` (the
    live closed-beta endpoint). The vault's `CONFIG.md` `[feedback]
 worker_url` overrides this if present.
 
    ```sh
    curl -sS -X POST \
      -H "Content-Type: application/json" \
-     -H "x-cowork-studio-version: 0.2.3" \
+     -H "x-cowork-vault-version: 0.2.3" \
      -d '{"title": "<the title>", "body": "<the body>"}' \
      <WORKER_URL>/v1/report
    ```
@@ -75,7 +75,7 @@ worker_url` overrides this if present.
 4. **Parse the response.** On success the Worker returns:
 
    ```json
-   { "url": "https://github.com/infinite-solutions-group/cowork-studio/issues/N", "number": N }
+   { "url": "https://github.com/infinite-solutions-group/cowork-vault/issues/N", "number": N }
    ```
 
    Tell the user: _"Filed as issue #N. You can follow up at <url> if you
@@ -134,7 +134,7 @@ To recover:
 ## Setup note for the maintainer
 
 The Worker URL is baked into this skill (live closed-beta endpoint at
-`https://cowork-studio-feedback.michael-ludden.workers.dev`) and into
+`https://cowork-vault-feedback.michael-ludden.workers.dev`) and into
 the bundled CONFIG.md template under `[feedback] worker_url`. To rotate
 or point at a different Worker, update both. See
 `services/feedback-worker/README.md` for redeploy instructions.
