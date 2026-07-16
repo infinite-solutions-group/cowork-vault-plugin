@@ -5,10 +5,15 @@ description: Set up and maintain a Cowork vault. Normalizes a folder of Markdown
 
 # bootstrap-vault
 
-**Version: 0.6.0** — **The starter pack is complete — all seven skills are
+**Version: 0.7.0** — **The starter pack is complete — all seven skills are
 authored:** `email-drafter`, `morning-briefing`, `preferences-updater`,
 `downloads-filer`, `session-retrospective`, `conflict-scanner`, and
-`project-skeleton` (all L1, all installed by `INSTALL_STARTER_PACK`). The
+`project-skeleton` (all L1, all installed by `INSTALL_STARTER_PACK`). **New in
+0.7.0: an optional `INSTALL_REALTOR_PACK`** installs three real-estate
+transaction skills — `transaction-briefing` (Asana → daily deal brief, L1),
+`transaction-emailer` (milestone client emails that always cc the agent, L1), and
+`transaction-intake` (files Drive documents → updates Asana → drafts follow-ups,
+L2, grant-gated). The
 **AUTHOR** operation (the "skills builder") lets the user grow the vault beyond
 these: describe a skill in plain English ("make me a skill that files receipts")
 and bootstrap-vault drafts, gets approval for, and writes a runnable vault skill
@@ -25,7 +30,7 @@ full body for review. Live feedback Worker URL is baked in (see
 `submit-feedback`). INIT handles pre-existing vaults gracefully (installs missing
 starter skills instead of refusing). DISPATCH / USE / LIST / DOCTOR runtime
 operations are live on top of the original setup operations. If the user asks
-_"what version of Cowork Studio do I have"_ or _"what's new"_, answer from this
+_"what version of Cowork Vault do I have"_ or _"what's new"_, answer from this
 header.
 
 Turns a folder of loose markdown into a structured Cowork vault: governance
@@ -63,7 +68,8 @@ Trigger on any of:
 ## Operations
 
 This skill exposes setup operations (INIT / IMPORT / INSTALL_STARTER_PACK /
-UPGRADE / AUTHOR) plus runtime operations (DISPATCH / USE / LIST / DOCTOR). Pick
+INSTALL_REALTOR_PACK / UPGRADE / AUTHOR) plus runtime operations (DISPATCH / USE /
+LIST / DOCTOR). Pick
 the one that matches the user's intent. If unclear, ask. AUTHOR is the
 "build me a skill by asking" operation — it turns a plain-English description
 into a runnable vault skill.
@@ -75,7 +81,7 @@ Inputs: optional vault path. Default `$HOME/cowork-vault`.
 1. Verify the target path. If it exists and is **already a vault**
    (has a `CONFIG.md` at the root), do not refuse outright — that
    strands users with pre-existing vaults. Instead:
-   - Read `CONFIG.md` to confirm it's a Cowork Studio vault
+   - Read `CONFIG.md` to confirm it's a Cowork Vault vault
    - Skip the scaffolding step
    - Check which starter-pack skills are missing under
      `<vault>/skills/<name>/` and offer to install just those
@@ -462,6 +468,49 @@ Try it: "<one example phrase>"
 Make it recurring (if scheduled): type /schedule in this task and pick a cadence.
 ```
 
+### Operation 10: INSTALL_REALTOR_PACK — the real-estate transaction skills
+
+An optional vertical pack for a real-estate agent running listings/escrows off an
+Asana project. Ships alongside the generic starter pack but is installed only on
+request (it is not part of INSTALL_STARTER_PACK). Each skill ships as a complete
+SKILL.md under this plugin's `resources/realtor-pack/<name>/`; copy them in
+unmodified, skipping any name collision (the user authored their own).
+
+**Ships three skills:**
+
+1. **transaction-briefing** (`resources/realtor-pack/transaction-briefing/`) —
+   one-page briefing for a deal from its Asana project: overdue / due-today /
+   next-5-days / contingency + closing deadlines. Read-only; writes the brief to
+   `/outbox/drafts/`. **L1.**
+2. **transaction-emailer** (`resources/realtor-pack/transaction-emailer/`) —
+   drafts milestone client emails (inspection confirmation, disclosure reminder,
+   appraisal update, repair review, closing note) in the agent's voice, **always
+   cc'ing the agent** for visibility. Never sends. **L1.**
+3. **transaction-intake** (`resources/realtor-pack/transaction-intake/`) — files
+   documents from a Drive folder, marks the matching Asana task received with a
+   comment, adjusts downstream dates, and hands a follow-up to
+   transaction-emailer. Writes to Asana, so **L2** — it requires a
+   `CONFIG.md [authority-grants]` entry and a `[risk-acknowledgments]` entry
+   (untrusted-input + external-mutation). Do not install it silently at L2: tell
+   the user it changes Asana on their behalf, get an explicit yes, and record the
+   grant + acknowledgment. Absent the grant it runs dry-run (report only).
+
+**On install:**
+
+1. Copy the three skill templates into `<vault>/skills/`, skipping name
+   collisions, and register them in `CONFIG.md [skills]`.
+2. Seed `<vault>/memory/transactions.md` if absent — the deal registry the pack
+   reads. Per transaction record: property address, client name + email, the
+   **agent_cc** address (the agent's own email, for the mandatory cc), the
+   **Asana project id**, the **Drive folder id**, anchor dates (acceptance,
+   close), and a **doc-type → Asana-task → follow-up-milestone** map. Write a
+   commented template block the user fills in; do not invent a deal.
+3. For `transaction-intake`, run its Risk gate before its first Asana write (see
+   that skill) and record the grant + acknowledgment in `CONFIG.md`.
+4. Point the user at Asana as the connector to install if it isn't already
+   present (Customize → Browse plugins), and suggest `/schedule` for the briefing
+   (daily) and intake (hourly/daily) sweeps.
+
 ## Connector wiring (MCP)
 
 Cowork already manages OAuth, tokens, and credential storage for installed
@@ -480,6 +529,7 @@ catalog and surface the top 1–3 connectors as suggestions:
 - files / docs / drive → Google Drive, OneDrive, Notion
 - chat / channel / DM → Slack, Microsoft Teams
 - issues / tickets / sprint → Linear, Jira, GitHub
+- tasks / project board / checklist / transaction → Asana, ClickUp, Monday
 - CRM / leads / deals / pipeline → Salesforce, HubSpot, Close
 - billing / charges / invoices → Stripe
 - knowledge base / docs / wiki → Notion, Guru
@@ -688,7 +738,7 @@ default_authority: L1
 
 [feedback]
 
-worker_url: https://cowork-studio-feedback.michael-ludden.workers.dev
+worker_url: https://cowork-vault-feedback.michael-ludden.workers.dev
 ```
 
 ### README.md (vault root, write on INIT)

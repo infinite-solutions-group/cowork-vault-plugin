@@ -1,12 +1,12 @@
 {
-  "name": "cowork-studio",
-  "version": "0.6.0",
+  "name": "cowork-vault",
+  "version": "0.7.0",
   "description": "Turns a folder of Markdown agent prompts into a structured Cowork vault: governance docs, normalized skills, memory layout, scheduled tasks, inbox/outbox routing, and a starter pack so the user has something working in the first thirty minutes.",
   "author": {
     "name": "Michael Ludden",
-    "url": "https://github.com/infinite-solutions-group/cowork-studio"
+    "url": "https://github.com/infinite-solutions-group/cowork-vault"
   },
-  "homepage": "https://github.com/infinite-solutions-group/cowork-studio",
+  "homepage": "https://github.com/infinite-solutions-group/cowork-vault",
   "license": "Apache-2.0",
   "keywords": ["cowork", "skill", "vault", "agent", "setup", "import", "mcp"]
 }

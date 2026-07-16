@@ -1,7 +1,39 @@
 # Changelog
 
-All notable changes to the Cowork Studio plugin. Format roughly follows
+All notable changes to the Cowork Vault plugin. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [0.7.0] — 2026-07-12
+
+### Added
+
+- **`INSTALL_REALTOR_PACK` — an optional real-estate transaction vertical.**
+  A new bootstrap-vault operation (Operation 10) that installs three skills for
+  an agent running listings/escrows off an Asana project. Shipped separately from
+  the generic starter pack (installed only on request), under
+  `resources/realtor-pack/`:
+  - **`transaction-briefing`** (L1) — one-page deal briefing from the listing's
+    Asana project: overdue / due-today / next-5-days / contingency + closing
+    deadlines. Read-only; writes the brief to `/outbox/drafts/`; teaches
+    `/schedule` for a daily run.
+  - **`transaction-emailer`** (L1) — drafts milestone client emails (inspection
+    confirmation, disclosure reminder, appraisal update, repair review, closing
+    note) in the agent's voice, **always cc'ing the agent** for visibility. Never
+    sends. Carries an inline milestone-template catalog.
+  - **`transaction-intake`** (**L2**) — files documents from a Drive folder,
+    marks the matching Asana task received with a comment, adjusts downstream
+    dates, and hands a follow-up to `transaction-emailer`. Writes to Asana, so it
+    is grant-gated: requires `CONFIG.md [authority-grants]` + a
+    `[risk-acknowledgments]` entry (untrusted-input + external-mutation), runs
+    dry-run without the grant, never deletes, never sends, and treats document
+    contents as data (not instructions).
+- Seeds a `/memory/transactions.md` deal registry (address, client, **agent_cc**,
+  Asana project id, Drive folder id, anchor dates, doc-type→task→milestone map)
+  that all three skills read.
+- Added **Asana** (tasks / project board / checklist / transaction) to the
+  connector suggestion catalog and DOCTOR keyword map.
+- `plugin-validator` now covers the realtor-pack skills (frontmatter + DISPATCH
+  contract sections), allowing L2 where the skill legitimately writes externally.
 
 ## [0.6.0] — 2026-07-01
 
@@ -87,7 +119,7 @@ DISPATCH contract, all covered by `plugin-validator` tests.
 - Promoted `morning-briefing` from "planned" to "shipped" in
   `bootstrap-vault`; `INSTALL_STARTER_PACK` now installs it alongside
   `email-drafter`.
-- Starter-pack skills are now covered by `@cowork-studio/plugin-validator`
+- Starter-pack skills are now covered by `@cowork-vault/plugin-validator`
   tests: each must have valid frontmatter, the DISPATCH contract sections
   (`## Authority`, `## When to use`, `## Steps`, `## Memory reads`,
   `## Memory writes`, `## Reporting block`), and declare L1 authority.
@@ -118,7 +150,7 @@ DISPATCH contract, all covered by `plugin-validator` tests.
 
 - **Live feedback Worker URL baked in.** `submit-feedback` skill now
   points at the deployed Cloudflare Worker at
-  `https://cowork-studio-feedback.michael-ludden.workers.dev` and the
+  `https://cowork-vault-feedback.michael-ludden.workers.dev` and the
   bundled `CONFIG.md` template includes the URL under `[feedback]
 worker_url`. Users no longer need to configure anything to send
   feedback — they just say "report a bug" and Claude POSTs the issue.
