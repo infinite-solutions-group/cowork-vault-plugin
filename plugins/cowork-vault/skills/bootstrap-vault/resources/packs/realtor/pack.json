@@ -1,0 +1,162 @@
+{
+  "$schema": "../pack.schema.json",
+  "name": "realtor",
+  "title": "Real estate transactions",
+  "description": "For an agent running listings and escrows off an Asana transaction checklist. Documents that arrive by email file themselves and check off the matching task; deadlines produce draft client emails.",
+  "whenToOffer": "The user mentions listings, escrow, transactions, closings, contingencies, MLS, disclosures, or being a real-estate agent.",
+  "default": false,
+  "surface": [
+    {
+      "say": "Import my deals",
+      "runs": "transaction-import"
+    },
+    {
+      "say": "New deal at <address>",
+      "runs": "transaction-setup"
+    },
+    {
+      "say": "Catch me up",
+      "runs": "transaction-autopilot"
+    },
+    {
+      "say": "What's happening today?",
+      "runs": "transaction-briefing"
+    }
+  ],
+  "skills": [
+    {
+      "name": "transaction-import",
+      "authority": "L2",
+      "summary": "Finds existing Asana transaction projects and registers them all, reading details from each project's Transaction Info task.",
+      "riskGate": {
+        "sameAs": "transaction-autopilot"
+      }
+    },
+    {
+      "name": "transaction-setup",
+      "authority": "L2",
+      "summary": "One-step new deal: document folder, Asana link, registry block.",
+      "riskGate": {
+        "sameAs": "transaction-autopilot"
+      }
+    },
+    {
+      "name": "transaction-autopilot",
+      "authority": "L2",
+      "summary": "The \"catch me up\" runner. Evaluates the playbook across every active deal.",
+      "riskGate": {
+        "combination": "untrusted-input + external-mutation",
+        "prompt": "It reads documents and email that arrived from outside **and** changes your Asana project on your behalf. A malicious or mislabeled document could try to steer those changes. It only completes tasks, comments, and adjusts dates in the deals you list; it logs every change; it never deletes or sends email. Proceed?",
+        "scope": "asana-writes,drive-read",
+        "onDecline": "dry-run"
+      }
+    },
+    {
+      "name": "transaction-fetch",
+      "authority": "L2",
+      "summary": "Pulls document attachments from Gmail into the deal folder. Needs a Gmail MCP server that can download attachments.",
+      "riskGate": {
+        "combination": "untrusted-input + external-mutation",
+        "prompt": "It reads your email and saves attachments into your deal folders, then labels those messages as processed. It never sends, replies to, forwards, or deletes mail. Proceed?",
+        "scope": "gmail-read,gmail-labels,files-write",
+        "onDecline": "dry-run"
+      }
+    },
+    {
+      "name": "transaction-briefing",
+      "authority": "L1",
+      "summary": "One-page daily brief per deal from Asana. Read-only."
+    },
+    {
+      "name": "transaction-emailer",
+      "authority": "L1",
+      "summary": "Milestone client emails in the agent's voice, always cc'ing them. Never sends."
+    },
+    {
+      "name": "transaction-intake",
+      "authority": "L2",
+      "summary": "Files documents, updates Asana, queues follow-ups.",
+      "riskGate": {
+        "sameAs": "transaction-autopilot"
+      }
+    }
+  ],
+  "firstRun": {
+    "skill": "transaction-import",
+    "why": "you almost certainly have deals running in Asana already, and this registers them all at once instead of one at a time",
+    "skipIf": "the deal registry already lists deals"
+  },
+  "memory": [
+    {
+      "file": "playbook.md",
+      "from": "memory/playbook.md",
+      "ifAbsent": true,
+      "note": "Ships ready to use. Never ask the user to configure it — they change rules by talking."
+    },
+    {
+      "file": "transactions.md",
+      "template": true,
+      "note": "The deal registry. Write a commented template block; never invent a deal."
+    },
+    {
+      "file": "actions.jsonl",
+      "empty": true,
+      "note": "The action ledger. Every rule fires once per trigger; this is what remembers."
+    }
+  ],
+  "connectors": [
+    {
+      "name": "asana",
+      "required": true,
+      "why": "the transaction checklist"
+    },
+    {
+      "name": "gmail",
+      "required": true,
+      "why": "client email drafts"
+    },
+    {
+      "name": "google-drive",
+      "required": false,
+      "why": "document folders; local folders work without it"
+    },
+    {
+      "name": "google-calendar",
+      "required": false,
+      "why": "deadline visibility"
+    }
+  ],
+  "extensions": [
+    {
+      "name": "gmail-attachments",
+      "displayName": "Gmail Attachments",
+      "required": false,
+      "provides": ["gmail_search", "gmail_get_message", "gmail_download_attachment"],
+      "why": "downloads document attachments out of Gmail — no built-in connector can do this, including Google's own",
+      "setupDoc": "docs/setup-mcp-ingest.md",
+      "alternativeTo": "documents dropped into the deal folder by hand, or by a cloud ingest service"
+    },
+    {
+      "name": "outlook-attachments",
+      "displayName": "Outlook Attachments",
+      "required": false,
+      "provides": ["outlook_search", "outlook_get_message", "outlook_download_attachment"],
+      "why": "same job for Outlook / Microsoft 365 mailboxes",
+      "setupDoc": "docs/setup-mcp-ingest.md",
+      "alternativeTo": "documents dropped into the deal folder by hand, or by a cloud ingest service"
+    }
+  ],
+  "schedules": [
+    {
+      "skill": "transaction-autopilot",
+      "suggest": "hourly",
+      "why": "files documents and drafts due reminders; safe at this cadence because it never acts twice on the same thing"
+    },
+    {
+      "skill": "transaction-briefing",
+      "suggest": "daily, early morning",
+      "why": "the day's read before you start"
+    }
+  ],
+  "docs": "docs/realtor-guide.md"
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "../pack.schema.json",
+  "name": "starter",
+  "title": "Starter pack",
+  "description": "The generic vault skills every user gets: daily briefing, email drafting, preference capture, downloads filing, retrospectives, conflict scanning, and project scaffolding.",
+  "whenToOffer": "Always — this is the default pack installed at INIT.",
+  "default": true,
+  "surface": [
+    { "say": "Brief me", "runs": "morning-briefing" },
+    { "say": "Draft a reply to <person>", "runs": "email-drafter" },
+    { "say": "File my downloads", "runs": "downloads-filer" }
+  ],
+  "skills": [
+    {
+      "name": "email-drafter",
+      "authority": "L1",
+      "summary": "Drafts client/prospect replies in your voice; never sends."
+    },
+    {
+      "name": "morning-briefing",
+      "authority": "L1",
+      "summary": "One-page daily brief from calendar + mail + memory."
+    },
+    {
+      "name": "preferences-updater",
+      "authority": "L1",
+      "summary": "Captures corrections and standing rules; proposes memory updates."
+    },
+    {
+      "name": "downloads-filer",
+      "authority": "L1",
+      "summary": "Sorts /inbox/downloads into the right project folder."
+    },
+    {
+      "name": "session-retrospective",
+      "authority": "L1",
+      "summary": "Scores the session and proposes improvements."
+    },
+    {
+      "name": "conflict-scanner",
+      "authority": "L1",
+      "summary": "Flags requests that contradict stored preferences or decisions."
+    },
+    {
+      "name": "project-skeleton",
+      "authority": "L1",
+      "summary": "Scaffolds a new /projects/<name>/ folder and registers it."
+    }
+  ],
+  "memory": [],
+  "connectors": [
+    { "name": "gmail", "required": false, "why": "briefing and email drafting" },
+    { "name": "google-calendar", "required": false, "why": "the briefing's schedule section" }
+  ],
+  "schedules": [
+    {
+      "skill": "morning-briefing",
+      "suggest": "daily, early morning",
+      "why": "the day's read before you start"
+    }
+  ]
+}

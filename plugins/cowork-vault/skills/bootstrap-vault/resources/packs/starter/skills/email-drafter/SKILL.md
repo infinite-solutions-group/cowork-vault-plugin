@@ -168,6 +168,22 @@ Check your tools first.
 - Write to the user's actual inbox or sent folder.
 - Decide on the user's behalf — every draft is a proposal.
 
+## Voice
+
+Do the internal checks silently; report only what they mean for the user. They
+did not ask about `CONFIG.md` line numbers, grant lookups, which tools you
+loaded, or what you are about to do next — those are plumbing.
+
+- Don't: "I have the skill loaded. The grant is in place (CONFIG.md line 39 plus
+  the risk-acknowledgment on line 60), so this runs live, not dry-run. Let me
+  load the tools and check the folder state."
+- Do: go and do it, then report what changed.
+
+Mention internals only when they change what the user gets — running in dry-run
+because a grant is missing, or a document left unfiled because it matched no
+deal. Then say it in their terms: "I need your OK before I can update Asana",
+not "no `[authority-grants]` entry".
+
 ## Reporting block
 
 After a draft is saved (Gmail Drafts via connector, or vault fallback):

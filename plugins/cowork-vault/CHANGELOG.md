@@ -3,6 +3,49 @@
 All notable changes to the Cowork Vault plugin. Format roughly follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.0] — 2026-07-18
+
+### Added
+
+- **A standing rulebook the user edits by talking — `/memory/playbook.md`.**
+  Ships ready to use with four rules (document-arrived, deadline-approaching,
+  deadline-passed, email-arrived). Behavior changes happen in plain English
+  ("remind me three days out, not two") and the assistant edits the file; the
+  user is never asked to configure it. Turning a rule off writes a scoped
+  exception rather than deleting it, so it can be turned back on.
+- **An action ledger — `/memory/actions.jsonl`.** Every rule carries a
+  date- or id-anchored `once-key`, checked before acting and appended only after
+  success. This is what makes unattended running safe: a condition like "due in
+  two days" stays true for two days, and without a ledger an hourly schedule
+  would draft the same client email dozens of times.
+- **`transaction-autopilot` (L2)** — the single "catch me up" entry point.
+  Evaluates the playbook across every active deal and dispatches to
+  `transaction-intake` and `transaction-emailer`. Dry-runs without an authority
+  grant. Also the place behavior changes are made.
+- **`transaction-setup` (L2)** — one-step new deal: creates the document folder,
+  links the Asana project, builds the doc map from the project's real task names
+  (confirmed with the user), and writes the registry block.
+- **`docs/realtor-guide.md`** — the end-user guide: three phrases, what runs
+  unattended, how to change behavior, what the assistant will never do.
+
+### Changed
+
+- **The realtor pack's user surface is now three phrases** — "New deal at
+  \<address\>", "catch me up", "what's happening today?" — rather than five skill
+  names. Install presents it that way.
+- **`transaction-intake` honors `docs_mode`** (`drive` | `local` | `auto`), so a
+  deal's documents can live in Drive or in a local folder. `local` is designed to
+  pair with Google Drive for Desktop, so emailed documents still file
+  automatically and simply appear on disk.
+- **`transaction-intake` reads `_ingest-ledger.jsonl`** when present, using real
+  provenance (sender, subject, received date) in its Asana comment instead of
+  inferring from the filename.
+- **Install now sets the schedule up with the user** rather than suggesting it,
+  and states the honest limitation: document ingest is unattended (it runs in the
+  cloud), but checklist updates and drafts happen while Claude Desktop is open,
+  catching up on next open. `CONFIG.md [scheduled-tasks]` records intent and is
+  not an executor — a schedule written only there never runs.
+
 ## [0.7.0] — 2026-07-12
 
 ### Added

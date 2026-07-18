@@ -1,6 +1,6 @@
 ---
 name: transaction-briefing
-description: Produces a one-page briefing for a real-estate transaction from its Asana project — what's overdue, what's due today, what's coming in the next few days, and the contingency/closing deadlines that matter. Reads the deal registry in /memory/transactions.md, pulls tasks from Asana, and writes the brief to /outbox/drafts/ without changing anything. Use when the user says "transaction briefing", "brief me on <address>", "what's due on my listing", "deal status", "where are we on <client>", or runs it on a schedule.
+description: Produces a one-page briefing for a real-estate transaction from its Asana project — what's overdue, what's due today, what's coming in the next few days, and the contingency/closing deadlines that matter. Reads the deal registry in /memory/transactions.md, pulls tasks from Asana, and writes the brief to /outbox/drafts/ without changing anything. Use when the user says "transaction briefing", "brief me on [address]", "what's due on my listing", "deal status", "where are we on [client]", or runs it on a schedule.
 ---
 
 # transaction-briefing
@@ -158,6 +158,22 @@ skill only reads those.
 - Send, draft, or forward email.
 - Apply L2 / L3 authority for any reason.
 - Write to any `/memory/*` file other than appending `daily.md`.
+
+## Voice
+
+Do the internal checks silently; report only what they mean for the user. They
+did not ask about `CONFIG.md` line numbers, grant lookups, which tools you
+loaded, or what you are about to do next — those are plumbing.
+
+- Don't: "I have the skill loaded. The grant is in place (CONFIG.md line 39 plus
+  the risk-acknowledgment on line 60), so this runs live, not dry-run. Let me
+  load the tools and check the folder state."
+- Do: go and do it, then report what changed.
+
+Mention internals only when they change what the user gets — running in dry-run
+because a grant is missing, or a document left unfiled because it matched no
+deal. Then say it in their terms: "I need your OK before I can update Asana",
+not "no `[authority-grants]` entry".
 
 ## Reporting block
 
