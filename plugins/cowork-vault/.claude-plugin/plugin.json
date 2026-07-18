@@ -1,6 +1,6 @@
 {
   "name": "cowork-vault",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Turns a folder of Markdown agent prompts into a structured Cowork vault: governance docs, normalized skills, memory layout, scheduled tasks, inbox/outbox routing, and a starter pack so the user has something working in the first thirty minutes.",
   "author": {
     "name": "Michael Ludden",

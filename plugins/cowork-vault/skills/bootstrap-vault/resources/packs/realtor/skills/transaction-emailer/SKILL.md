@@ -1,6 +1,6 @@
 ---
 name: transaction-emailer
-description: Drafts milestone client emails for a real-estate transaction — inspection confirmation, disclosure reminder, appraisal update, repair-request review, closing note — in the agent's voice, auto-filled from the deal registry, and ALWAYS cc'ing the agent so they see everything that goes out. Never sends; leaves drafts in the mail Drafts folder (or /outbox/drafts/). Use when the user says "draft the <milestone> email", "email the seller about <x>", "send the inspection confirmation", or a milestone comes due.
+description: Drafts milestone client emails for a real-estate transaction — inspection confirmation, disclosure reminder, appraisal update, repair-request review, closing note — in the agent's voice, auto-filled from the deal registry, and ALWAYS cc'ing the agent so they see everything that goes out. Never sends; leaves drafts in the mail Drafts folder (or /outbox/drafts/). Use when the user says "draft the [milestone] email", "email the seller about [x]", "send the inspection confirmation", or a milestone comes due.
 ---
 
 # transaction-emailer
@@ -153,6 +153,22 @@ same structure (clear subject, 3–6 sentences, one concrete next step).
 - Omit the agent from Cc, or move the agent to Bcc.
 - Apply L2 / L3 authority for any reason.
 - Write to the user's actual Inbox or Sent folder.
+
+## Voice
+
+Do the internal checks silently; report only what they mean for the user. They
+did not ask about `CONFIG.md` line numbers, grant lookups, which tools you
+loaded, or what you are about to do next — those are plumbing.
+
+- Don't: "I have the skill loaded. The grant is in place (CONFIG.md line 39 plus
+  the risk-acknowledgment on line 60), so this runs live, not dry-run. Let me
+  load the tools and check the folder state."
+- Do: go and do it, then report what changed.
+
+Mention internals only when they change what the user gets — running in dry-run
+because a grant is missing, or a document left unfiled because it matched no
+deal. Then say it in their terms: "I need your OK before I can update Asana",
+not "no `[authority-grants]` entry".
 
 ## Reporting block
 

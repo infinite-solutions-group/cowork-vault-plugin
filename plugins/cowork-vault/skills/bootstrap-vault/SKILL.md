@@ -5,15 +5,19 @@ description: Set up and maintain a Cowork vault. Normalizes a folder of Markdown
 
 # bootstrap-vault
 
-**Version: 0.7.0** — **The starter pack is complete — all seven skills are
+**Version: 0.8.0** — **The starter pack is complete — all seven skills are
 authored:** `email-drafter`, `morning-briefing`, `preferences-updater`,
 `downloads-filer`, `session-retrospective`, `conflict-scanner`, and
-`project-skeleton` (all L1, all installed by `INSTALL_STARTER_PACK`). **New in
-0.7.0: an optional `INSTALL_REALTOR_PACK`** installs three real-estate
-transaction skills — `transaction-briefing` (Asana → daily deal brief, L1),
+`project-skeleton` (all L1, the `starter` pack, installed at INIT). An optional
+`realtor` pack installs five real-estate transaction skills —
+`transaction-setup` (one-step new deal, L2), `transaction-autopilot` (the "catch
+me up" runner, L2), `transaction-briefing` (Asana → daily deal brief, L1),
 `transaction-emailer` (milestone client emails that always cc the agent, L1), and
-`transaction-intake` (files Drive documents → updates Asana → drafts follow-ups,
-L2, grant-gated). The
+`transaction-intake` (files documents → updates Asana → drafts follow-ups, L2,
+grant-gated). **New in 0.8.0:** the pack is driven by a standing rulebook
+(`/memory/playbook.md`) the user edits **by talking**, and an action ledger
+(`/memory/actions.jsonl`) that makes every rule fire **once per trigger** — the
+guarantee that makes unattended running safe. The
 **AUTHOR** operation (the "skills builder") lets the user grow the vault beyond
 these: describe a skill in plain English ("make me a skill that files receipts")
 and bootstrap-vault drafts, gets approval for, and writes a runnable vault skill
@@ -65,18 +69,96 @@ Trigger on any of:
   "research this company", "what's coming today") — bootstrap-vault acts
   as the **dispatcher** and runs the right vault skill.
 
+## How to talk to the user
+
+Everything below this line is internal vocabulary. **None of it belongs in what
+the user reads.** They did not buy a vault architecture; they bought an assistant
+that files documents and drafts email.
+
+Never say, in user-facing output: `DISPATCH`, `INSTALL_PACK`, `L0`/`L1`/`L2`/`L3`,
+"authority grant", "risk acknowledgment", "reporting block", "the contract",
+"once-key", "idempotent", "manifest", "toolbelt", "dry-run mode".
+
+Say the meaning instead:
+
+| Internal                                 | To the user                                     |
+| ---------------------------------------- | ----------------------------------------------- |
+| "this skill is L2 and has no grant"      | "I need your OK before I can change your Asana" |
+| "running in dry-run"                     | "here's what I'd do — nothing changed yet"      |
+| "recorded the risk acknowledgment"       | "noted that you approved this"                  |
+| "the once-key is already in the ledger"  | "already handled that one"                      |
+| "per the reporting block"                | _(say nothing — just report)_                   |
+| "DISPATCH selected transaction-briefing" | "Running your transaction briefing."            |
+
+Two habits that matter more than vocabulary:
+
+**Don't narrate internal checks.** Reading config, resolving grants, loading
+tools, deciding what to do next — do it, don't describe it. "I have the skill
+loaded. The grant is in place (CONFIG.md line 39), so this runs live" tells the
+user four things they never asked about, before anything happened.
+
+**Surface an internal only when it changes their outcome.** A missing grant, an
+unfiled document, a rule that didn't fire — those are worth saying, in their
+terms. Everything else is plumbing.
+
+Skill names are the one exception: naming the skill you're running, in one short
+line, is how a wrong choice becomes visible. Keep it to that.
+
+## Vault-file resolution contract
+
+**Every skill reads and writes vault paths like `<vault>/memory/transactions.md`
+and stays unaware of where the vault physically lives.** This section is the only
+place that knows. Skills inherit it through DISPATCH; they must never resolve a
+vault path themselves.
+
+To resolve `<vault>/<relative-path>`:
+
+1. If `CONFIG.md [vault-location] local_path` is set **and** that path exists on
+   this machine, use the filesystem. Fastest, works offline.
+2. Otherwise use the Drive connector against `drive_folder_id`, walking the same
+   relative path as folders in Drive.
+3. Neither available → say so plainly and stop. **Never** silently fall back to a
+   different vault, and never scaffold a fresh one — a user whose Drive connector
+   is missing has a connection problem, not an empty vault, and creating one
+   would hide their real files behind an empty duplicate.
+
+**Why this exists.** Since 2026-07-07 Cowork runs sessions on Anthropic's
+servers, so a session may have no access to the user's disk at all — but a task
+that needs local files runs locally, which means it only runs while the machine
+is awake with Claude Desktop open. A vault reachable through Drive runs
+unattended; a vault only on local disk does not. Rule 1 keeps desktop sessions
+fast; rule 2 is what makes a phone or a scheduled cloud run work.
+
+`local_path` is **optional and absent by default.** It is set only when the user
+has Google Drive for Desktop syncing the vault folder. Do not tell users they
+need it — Drive alone is sufficient and requires no extra software.
+
 ## Operations
 
-This skill exposes setup operations (INIT / IMPORT / INSTALL_STARTER_PACK /
-INSTALL_REALTOR_PACK / UPGRADE / AUTHOR) plus runtime operations (DISPATCH / USE /
-LIST / DOCTOR). Pick
-the one that matches the user's intent. If unclear, ask. AUTHOR is the
-"build me a skill by asking" operation — it turns a plain-English description
+This skill exposes setup operations (INIT / IMPORT / INSTALL_PACK / UPGRADE /
+MIGRATE_VAULT / AUTHOR) plus runtime operations (DISPATCH / USE / LIST /
+DOCTOR). Pick the one that matches the user's intent. If unclear, ask. AUTHOR is
+the "build me a skill by asking" operation — it turns a plain-English description
 into a runnable vault skill.
 
 ### Operation 1: INIT — first-time vault setup
 
-Inputs: optional vault path. Default `$HOME/cowork-vault`.
+**Default to a vault in Google Drive.** That is what lets scheduled work run
+while the user's machine is off, and lets them drive it from a phone. Create
+`Cowork Vault` in their Drive via the Drive connector, record its id in
+`[vault-location]`, and leave `local_path` empty.
+
+Offer local-only **only** if the Drive connector is unavailable or the user asks
+for it — and when they choose it, say what it costs in one sentence: scheduled
+work will wait until their machine is awake with Claude Desktop open. Do not
+present this as a neutral choice; it isn't.
+
+If the user has Google Drive for Desktop, additionally record `local_path` so
+desktop sessions read from disk. Do not prompt them to install it — Drive alone
+is sufficient.
+
+Inputs: optional vault path or Drive folder name. Default: `Cowork Vault` in
+Drive, or `$HOME/cowork-vault` in local mode.
 
 1. Verify the target path. If it exists and is **already a vault**
    (has a `CONFIG.md` at the root), do not refuse outright — that
@@ -92,7 +174,7 @@ Inputs: optional vault path. Default `$HOME/cowork-vault`.
    directory tree below, write the governance defaults from the
    Templates section, write a vault-root `README.md`.
 4. Ask the user if they want to install the Starter Pack now. If yes,
-   call INSTALL_STARTER_PACK.
+   call INSTALL_PACK with the `starter` pack.
 5. Ask if they have existing agent files to import. If yes, call IMPORT.
 6. Print the Reporting Block (see below).
 
@@ -235,54 +317,130 @@ hourly verbs without user invocation ("every morning", "at 7am", "nightly").
 Otherwise tag as `worker`. A worker describes a single, narrow capability
 and does not reference other agents.
 
-### Operation 3: INSTALL_STARTER_PACK
+### Operation 3: INSTALL_PACK — install a skill pack
 
-Copies a set of baseline skills into `<vault>/skills/`. Each starter skill
-ships as a complete SKILL.md template under this plugin's
-`resources/starter-pack/<name>/`. The skill copies them in unmodified.
+Packs are **self-describing**. Each lives at
+`resources/packs/<name>/` with a `pack.json` manifest (schema:
+`resources/packs/pack.schema.json`), its skills under `skills/<skill>/SKILL.md`,
+and any seed files under `memory/`.
 
-Do not overwrite existing skills with the same names; if a name collision
-occurs, log it and skip that skill (the user has authored their own version).
+**Read the manifest and follow it.** Do not hardcode knowledge of which packs
+exist or what they contain — adding a vertical must never require editing this
+file.
 
-After copying, update `<vault>/CONFIG.md` `[skills]` section so DISPATCH can
-find them.
+**Steps:**
 
-**Currently shipped:**
+1. **Read `resources/packs/<name>/pack.json`.** No such directory → say which
+   packs are available (Operation 3b) and stop.
 
-1. **email-drafter** (`resources/starter-pack/email-drafter/SKILL.md`) —
-   drafts client emails in the user's voice. Reads inbound, matches tone,
-   produces a draft in `/outbox/drafts/`. Never sends. L1.
-2. **morning-briefing** (`resources/starter-pack/morning-briefing/SKILL.md`) —
-   one-page daily brief from calendar + recent mail + memory, written to
-   `/outbox/drafts/`. Read-only; never sends. L1. Teaches the user to make it
-   recurring via Cowork's `/schedule`.
-3. **preferences-updater** (`resources/starter-pack/preferences-updater/SKILL.md`) —
-   captures corrections and standing rules from the session and proposes memory
-   updates via `/outbox/proposals/`; applies to `/memory/*` only on approval. L1.
+2. **Copy each `skills[]` entry** from `skills/<name>/SKILL.md` into
+   `<vault>/skills/`. **Skip name collisions** and log them — the user authored
+   their own version, and overwriting it would destroy their work.
 
-4. **downloads-filer** (`resources/starter-pack/downloads-filer/SKILL.md`) —
-   sorts loose files in `/inbox/downloads/` into the right `/projects/<name>/`
-   subfolder using the registry in `/memory/projects.md`. Moves within the vault
-   only, logs every move (reversible), never deletes; flags anything it can't
-   confidently place. L1.
-5. **session-retrospective** (`resources/starter-pack/session-retrospective/SKILL.md`) —
-   scores the session against a fixed 0–100 rubric and proposes concrete
-   improvements to `/outbox/proposals/`. Read-only; routes memory items to
-   `preferences-updater`. L1.
-6. **conflict-scanner** (`resources/starter-pack/conflict-scanner/SKILL.md`) —
-   diffs recent instructions against `/memory/preferences.md` and
-   `/memory/decisions.md` and flags contradictions to
-   `/inbox/handoff/conflicts.md`. Flags only; never reconciles. L1.
-7. **project-skeleton** (`resources/starter-pack/project-skeleton/SKILL.md`) —
-   scaffolds `/projects/<name>/` (briefs, research, drafts, correspondence,
-   contracts) and proposes a `/memory/projects.md` registry entry for approval.
-   L1.
+3. **Register each skill in `CONFIG.md [skills]`** using its `summary` and
+   `authority`.
 
-The starter pack is complete — all seven skills are authored.
+4. **Seed `memory[]` files** into `<vault>/memory/`:
+   - `from` → copy that path verbatim from the pack.
+   - `template: true` → write a **commented template** the user fills in. Never
+     invent data.
+   - `empty: true` → create the file empty (ledgers, append-only logs).
+   - `ifAbsent` defaults true — **never overwrite**, the user may have tuned it.
 
-When the user runs INSTALL_STARTER_PACK, install every skill that has an
-authored template file (currently all seven), skipping any whose name already
-exists in the vault (the user authored their own).
+5. **Run the risk gate for every skill above L1.** Show `riskGate.prompt`
+   verbatim, get an explicit yes, then record `[authority-grants]` and
+   `[risk-acknowledgments]` in `CONFIG.md` with a timestamp. On no, honor
+   `onDecline` — `dry-run` means the skill installs and reports without acting,
+   which is a legitimate mode, not a failure. `sameAs` reuses another skill's
+   gate: **ask once, cover both.**
+
+6. **Check `connectors[]`.** Point the user at Customize → Browse plugins for
+   anything missing. For `required: false`, say specifically what degrades
+   rather than implying the pack is broken.
+
+6b. **Check `extensions[]`.** These are `.mcpb` bundles, and they install into
+**Claude Desktop → Settings → Extensions — not into the vault.** A vault is
+data a session reads; an extension is a process Claude launches. They are
+separate layers, so installing a pack can never install an extension, and the
+user has to do it themselves.
+
+For each entry, look for its `provides[]` tool names on your toolbelt:
+
+- **Present** → say so and move on. Do not make the user prove it.
+- **Absent** → name the bundle, say what it enables in one line (`why`), and
+  point at its `setupDoc`. If `alternativeTo` is set, say what still works
+  without it, so an absent extension reads as a smaller product rather than a
+  broken one.
+
+Multiple entries are often alternatives, not a checklist — a user on Gmail
+needs the Gmail bundle and should never be told to install the Outlook one.
+Match to what they actually use; if you can't tell, ask which mail they use
+rather than listing both.
+
+7. **Run the pack's `firstRun` skill, if it declares one.** This is the step
+   that turns "installed" into "useful", and skipping it leaves the user staring
+   at an assistant that knows nothing about their work.
+
+   Offer it in the pack's own words (`why`), then run it on a yes. Honor
+   `skipIf` — offering an importer to someone whose registry is already full is
+   noise.
+
+   Do this **before** setting up schedules. Scheduling an assistant that knows
+   about none of the user's work means its first runs find nothing, which reads
+   as broken rather than as empty.
+
+8. **Set up `schedules[]` with the user, don't just suggest them.** Run the
+   skill once, then walk them through typing `/schedule` in that task and
+   picking the cadence. `CONFIG.md [scheduled-tasks]` records intent and is
+   **not an executor** — a schedule written only there never runs.
+
+   **State the real condition, which is about file location, not the app.**
+   Since 2026-07-07 Cowork runs scheduled tasks remotely — they fire on cadence
+   with the machine asleep and the desktop app closed — **except** that a task
+   needing local files or apps runs locally, and so needs the machine awake with
+   Claude Desktop open.
+
+   That makes vault location the deciding factor: a vault reachable through the
+   Drive connector runs unattended; a vault only on local disk does not. Check
+   `CONFIG.md [vault-location]` and tell the user which they have. If it is
+   local-only, say plainly that scheduled work waits for their machine, and offer
+   to move the vault to Drive.
+
+   Record the outcome in `CONFIG.md [scheduled-tasks]` — including a declined
+   one, as `<skill>: not scheduled`. That section executes nothing; it is a
+   record, and its value is that `DOCTOR` and a later conversation can see what
+   was decided rather than guessing. A user who says "not now" should be able to
+   ask "what did we skip?" and get an answer.
+
+9. **Present the pack by its `surface`, not its skill list.** The user should
+   leave knowing a few phrases, not a list of skill names.
+
+**Reporting block:**
+
+```
+Installed: <title>
+
+What to say:
+  "<say>"  →  <what it does, in the user's words>
+  ...
+
+Imported:  <what firstRun found, or omit this line>
+Connected: <connectors present>    Missing: <connectors to add>
+Extensions: <installed>            To install: <name — one line on what it adds>
+Scheduled: <skill> <cadence>       (set up together, or "not yet")
+Seeded:    <memory files>
+
+Skipped (you already have your own): <names, or omit this line>
+```
+
+### Operation 3b: LIST_PACKS — what's available
+
+Enumerate `resources/packs/*/pack.json` and report each pack's `title`,
+`description`, and whether it's installed (its skills present in
+`CONFIG.md [skills]`). Offer a non-default pack when the conversation matches its
+`whenToOffer` — but **never install one unprompted.**
+
+At INIT, install every pack with `default: true` (currently just `starter`).
 
 ### Operation 4: UPGRADE — refresh vault against new template version
 
@@ -298,57 +456,88 @@ exists in the vault (the user authored their own).
 
 ### Operation 5: DISPATCH — act as a vault skill (the daily-use unlock)
 
-After setup, most user requests aren't setup-shaped — they're work-shaped:
-_"draft a reply"_, _"research this company"_, _"what's on my plate today"_.
-DISPATCH is how bootstrap-vault handles those by **loading a vault skill
-and acting as it**.
+After setup, most requests aren't setup-shaped — they're work-shaped: _"draft a
+reply"_, _"check my email for documents"_, _"catch me up"_, _"what's on my plate
+today"_. DISPATCH handles those by **loading a vault skill and acting as it**.
 
-Triggers: anything that isn't an explicit INIT / IMPORT / INSTALL_STARTER_PACK
-/ UPGRADE / LIST / DOCTOR command.
+Triggers: anything that isn't an explicit INIT / IMPORT / INSTALL_PACK / UPGRADE
+/ LIST / DOCTOR command.
 
-1. **Enumerate available skills.** Read `<vault>/CONFIG.md` `[skills]`
-   section (maintained by IMPORT + INSTALL_STARTER_PACK). If the section
-   is missing, scan `<vault>/skills/*/SKILL.md`.
+> **The user will never name a skill, and must never have to.** They say what
+> they want in their own words. Mapping that to the right skill is this
+> operation's whole job — if they have to say "run transaction-fetch", DISPATCH
+> has failed.
 
-2. **Match intent.** Compare the user's request against each skill's
-   `description` and `## When to use` triggers. If exactly one matches,
-   pick it. If multiple, show the top 2-3 with brief descriptions and
-   let the user choose. If none, ask the user what they want to do.
+1. **Confirm the vault is reachable.** Read `<vault>/CONFIG.md`. If you cannot,
+   say so plainly — "I can't see your vault, so I'm working without your saved
+   context" — and **stop before answering from raw connectors.** A vault request
+   answered from a bare mailbox looks like it worked and quietly isn't: no deal
+   registry, no saved preferences, no memory of what was already done.
 
-3. **Load the skill.** Read `<vault>/skills/<chosen-name>/SKILL.md`.
+2. **Enumerate available skills.** Read `CONFIG.md [skills]` (maintained by
+   IMPORT + INSTALL_PACK). If missing, scan `<vault>/skills/*/SKILL.md`.
 
-4. **Parse the skill's contract.** Look for these sections in the body:
-   - `## Authority` — `L0` / `L1` / `L2` / `L3` (default L1 if absent)
-   - `## Memory reads` — bulleted list of vault file paths to load
-   - `## Memory writes` — bulleted list of vault paths the skill writes,
-     optionally with `(L<n>)` qualifiers per path
-   - `## Steps` — the procedure to follow
+3. **Match intent, in this order:**
+   a. An installed pack's `surface[]` phrases — these are the sentences the pack
+   expects and map straight to a skill.
+   b. Each skill's `description` and `## When to use` triggers.
+   c. The subject matter. A request about email documents, deals, deadlines, or
+   client mail belongs to whichever skill owns that domain, even when the
+   wording is nothing like the trigger phrases.
 
-5. **Load memory context.** For each `## Memory reads` entry, read the
-   file if it exists. Tolerate missing files. Pull the content into your
-   working context so it's available while executing.
+4. **Prefer the skill over doing it yourself.** This is the rule that matters
+   most, because breaking it is invisible.
 
-6. **Execute the steps.** Follow the skill's `## Steps` section. Use the
-   loaded memory as reference. Match the user's prior voice / preferences
-   when the skill calls for it.
+   If a skill covers the request, **run the skill** — do not accomplish the same
+   thing directly with connector calls because it seems quicker. The skill
+   carries the parts that don't show up in the answer: which query to use for
+   this deal, which ledger records that it happened, which authority gate
+   applies, what gets logged. Work done outside the skill looks identical and
+   silently skips all of it.
 
-7. **Honor authority on writes.** For each write attempt:
-   - **L0:** refuse any write that isn't `/outbox/drafts/`. Log and stop.
-   - **L1:** writes to `/memory/*` route through
-     `/outbox/proposals/<task-id>-<file>.md` first; ask the user to
-     approve before the actual write. Drafts to `/outbox/drafts/` are
-     fine without approval (they're not "applied" until the user sends).
-   - **L2:** writes / external sends are allowed; log to
-     `/archive/sent/YYYY-MM-DD-<task-id>.md` for the record.
-   - **L3:** only within the scope declared in `CONFIG.md`
-     `[authority-grants]`. Refuse out-of-scope.
+   Concretely: if a skill exists for finding documents in email, never answer a
+   documents-in-email request by searching the mailbox yourself.
 
-8. **Surface a Reporting Block** as the skill's `## Reporting block`
-   section dictates, or the default shape if none.
+5. **Prefer the orchestrator over its workers.** If both a coordinating skill and
+   one it delegates to could match, pick the coordinator. Going straight to a
+   worker skips the cross-cutting record — for the realtor pack, "catch me up"
+   is `transaction-autopilot`, not `transaction-intake`, even though intake ends
+   up doing much of the work.
 
-9. **Append to `/memory/daily.md`** (if `CONFIG.md [daily-log] enabled = true`):
-   one line under today's `## YYYY-MM-DD` heading summarizing what just
-   happened ("- Drafted reply to Bob via email-drafter").
+6. **Say which skill you're running, in one short line**, before the work:
+   "Running your transaction briefing." That is not chatter — it is what makes a
+   wrong choice visible instead of silent. If nothing matches, say what you're
+   about to do instead, and let the user redirect.
+
+   If two or three match, name them briefly and ask. Don't guess between skills
+   that would take different actions.
+
+7. **Load the skill** — `<vault>/skills/<name>/SKILL.md` — and read its
+   `## Authority`, `## Memory reads`, `## Memory writes`, and `## Steps`.
+
+8. **Load memory context.** Read each `## Memory reads` path that exists.
+   Tolerate missing files.
+
+9. **Execute the steps** as written. Where the skill specifies an exact format —
+   a filename shape, a JSON line, a field name — follow it exactly. Those shapes
+   are usually a contract with another skill that reads them later; "improved"
+   field names break the reader silently.
+
+10. **Honor the skill's authority level on every write:**
+    - **L0:** refuse any write outside `/outbox/drafts/`.
+    - **L1:** `/memory/*` writes go via `/outbox/proposals/` for approval first;
+      drafts to `/outbox/drafts/` need no approval.
+    - **L2:** writes and external sends allowed; log each to
+      `/archive/sent/YYYY-MM-DD-<task-id>.md`.
+    - **L3:** only within the scope declared in `CONFIG.md [authority-grants]`.
+
+    Missing grant → run the skill's stated fallback, normally a dry run. Tell the
+    user in their terms — "I need your OK before I can update Asana" — not in
+    ours.
+
+11. **Report** as the skill's reporting section dictates.
+
+12. **Append to `/memory/daily.md`** if `CONFIG.md [daily-log] enabled = true`.
 
 ### Operation 6: USE — explicitly invoke a named skill
 
@@ -370,13 +559,46 @@ Triggers: _"what skills do I have"_, _"list my agents"_, _"show me the vault"_.
 
 Triggers: _"check my vault"_, _"is everything OK"_, _"vault doctor"_.
 
-Walk every SKILL.md and ROUTING.md:
+Also triggers on the question users actually ask: _"will this run without my
+computer?"_, _"does this work when my laptop is closed?"_
+
+**Lead with unattended-readiness** — it is the finding that changes what they can
+expect, so it goes first, not in a checklist:
+
+- Read `CONFIG.md [vault-location]`.
+- `mode = drive` → scheduled work runs on Cowork's servers; say plainly that it
+  keeps going with their machine off.
+- **Is anything actually scheduled?** Read `CONFIG.md [scheduled-tasks]`. Nothing
+  recorded, or every entry `not scheduled`, means the assistant only ever acts
+  when asked — worth saying plainly, since the user may believe otherwise. Offer
+  to set it up.
+- `mode = local` (or no Drive folder id) → scheduled work only runs while the
+  machine is awake with Claude Desktop open. Say so, say why (Cowork runs a task
+  needing local files locally), and offer MIGRATE_VAULT.
+- `local_path` set but missing on this machine → not an error. Note that this
+  session is reading through Drive and carry on.
+
+Then walk every SKILL.md and ROUTING.md:
 
 - Verify every referenced skill file exists.
 - Verify every `## Memory reads` path is a known vault location.
 - Verify every connector mentioned has an installed Cowork plugin.
 - Flag any skill below 0.6 description confidence (per `_warnings.md`).
 - Report findings as a checklist.
+
+### Operation 8b: MIGRATE_VAULT — move a local vault into Drive
+
+Triggers: _"move my vault to Drive"_, _"make this run without my computer"_.
+
+**Copy, never move.** The original stays exactly where it is.
+
+1. Create the vault folder in Drive and copy the tree into it.
+2. **Verify** every file arrived — compare the file list, and stop on any
+   mismatch rather than reporting success.
+3. Update `[vault-location]`: `mode = drive`, the new `drive_folder_id`, and
+   `local_path` set to the old path only if Drive for Desktop syncs it.
+4. Tell the user the original is untouched and where it is, so they can delete it
+   themselves once they're satisfied. **Never delete it.**
 
 ### Operation 9: AUTHOR — build a new skill from a plain-English description
 
@@ -451,7 +673,7 @@ user a skill DISPATCH can't parse.
 #### 6. Register and hand off
 
 Add the skill to `CONFIG.md [skills]` so DISPATCH can find it (same as
-`INSTALL_STARTER_PACK`). Then tell the user how to use it: they can invoke it by
+`INSTALL_PACK`). Then tell the user how to use it: they can invoke it by
 its trigger phrases (DISPATCH) or _"use `<name>`"_ (USE), and if it's a
 recurring task, they can make it automatic by typing `/schedule` in the Cowork
 task and picking a cadence.
@@ -468,48 +690,11 @@ Try it: "<one example phrase>"
 Make it recurring (if scheduled): type /schedule in this task and pick a cadence.
 ```
 
-### Operation 10: INSTALL_REALTOR_PACK — the real-estate transaction skills
+### Operation 10 — retired
 
-An optional vertical pack for a real-estate agent running listings/escrows off an
-Asana project. Ships alongside the generic starter pack but is installed only on
-request (it is not part of INSTALL_STARTER_PACK). Each skill ships as a complete
-SKILL.md under this plugin's `resources/realtor-pack/<name>/`; copy them in
-unmodified, skipping any name collision (the user authored their own).
-
-**Ships three skills:**
-
-1. **transaction-briefing** (`resources/realtor-pack/transaction-briefing/`) —
-   one-page briefing for a deal from its Asana project: overdue / due-today /
-   next-5-days / contingency + closing deadlines. Read-only; writes the brief to
-   `/outbox/drafts/`. **L1.**
-2. **transaction-emailer** (`resources/realtor-pack/transaction-emailer/`) —
-   drafts milestone client emails (inspection confirmation, disclosure reminder,
-   appraisal update, repair review, closing note) in the agent's voice, **always
-   cc'ing the agent** for visibility. Never sends. **L1.**
-3. **transaction-intake** (`resources/realtor-pack/transaction-intake/`) — files
-   documents from a Drive folder, marks the matching Asana task received with a
-   comment, adjusts downstream dates, and hands a follow-up to
-   transaction-emailer. Writes to Asana, so **L2** — it requires a
-   `CONFIG.md [authority-grants]` entry and a `[risk-acknowledgments]` entry
-   (untrusted-input + external-mutation). Do not install it silently at L2: tell
-   the user it changes Asana on their behalf, get an explicit yes, and record the
-   grant + acknowledgment. Absent the grant it runs dry-run (report only).
-
-**On install:**
-
-1. Copy the three skill templates into `<vault>/skills/`, skipping name
-   collisions, and register them in `CONFIG.md [skills]`.
-2. Seed `<vault>/memory/transactions.md` if absent — the deal registry the pack
-   reads. Per transaction record: property address, client name + email, the
-   **agent_cc** address (the agent's own email, for the mandatory cc), the
-   **Asana project id**, the **Drive folder id**, anchor dates (acceptance,
-   close), and a **doc-type → Asana-task → follow-up-milestone** map. Write a
-   commented template block the user fills in; do not invent a deal.
-3. For `transaction-intake`, run its Risk gate before its first Asana write (see
-   that skill) and record the grant + acknowledgment in `CONFIG.md`.
-4. Point the user at Asana as the connector to install if it isn't already
-   present (Customize → Browse plugins), and suggest `/schedule` for the briefing
-   (daily) and intake (hourly/daily) sweeps.
+The realtor pack no longer has its own operation. It is a manifest-driven pack
+like any other: `INSTALL_PACK realtor` (Operation 3). Adding a vertical means
+adding `resources/packs/<name>/pack.json` — never editing this file.
 
 ## Connector wiring (MCP)
 
@@ -714,6 +899,23 @@ vault_version: 1.0.0
 created: <ISO date>
 default_authority: L1
 
+[vault-location]
+
+# Where the vault lives. This decides whether scheduled work runs while
+
+# the user's machine is off — see the Vault-file resolution contract.
+
+# mode: drive | local
+
+mode = drive
+drive_folder_id = <id>
+
+# local_path is optional: set only if the folder is also on disk (Google
+
+# Drive for Desktop). Absent is normal and fully supported.
+
+local_path =
+
 [authority-grants]
 
 # skill-name: L2 or L3 with scope
@@ -752,7 +954,7 @@ how memory works, how to add scheduled tasks, what to do first.
 After every operation, return this format:
 
 ```
-Operation: <INIT | IMPORT | INSTALL_STARTER_PACK | UPGRADE>
+Operation: <INIT | IMPORT | INSTALL_PACK | UPGRADE | MIGRATE_VAULT>
 Vault: <absolute path>
 Status: <ok | partial | failed>
 
@@ -784,7 +986,7 @@ Next suggested action: <one sentence>
 This skill is permitted to write to:
 
 - `<vault>/memory/projects.md` (when registering a new project skeleton via
-  INSTALL_STARTER_PACK)
+  INSTALL_PACK)
 - `<vault>/archive/changelog.md` (after every operation)
 
 It must propose, not silently write, any updates to

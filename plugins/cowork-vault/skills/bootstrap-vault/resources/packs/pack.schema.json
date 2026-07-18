@@ -1,0 +1,245 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cowork-vault/pack.schema.json",
+  "title": "Cowork Vault skill pack",
+  "description": "Describes an installable pack so bootstrap-vault can install it generically. Adding a vertical means adding a directory with one of these — never editing bootstrap-vault.",
+  "type": "object",
+  "required": ["name", "title", "description", "skills"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "Directory name and install identifier, e.g. \"realtor\"."
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-facing name, e.g. \"Real estate transactions\"."
+    },
+    "description": {
+      "type": "string",
+      "description": "One or two sentences in the user's language, not the builder's."
+    },
+    "whenToOffer": {
+      "type": "string",
+      "description": "Signals that make this pack worth offering. bootstrap-vault matches against the conversation; it never installs a non-default pack unprompted."
+    },
+    "default": {
+      "type": "boolean",
+      "default": false,
+      "description": "true installs at INIT. Vertical packs are false — installed only on request."
+    },
+    "surface": {
+      "type": "array",
+      "description": "The phrases the user actually says. Keep it to about three; this is what gets presented, not the skill list.",
+      "items": {
+        "type": "object",
+        "required": ["say", "runs"],
+        "additionalProperties": false,
+        "properties": {
+          "say": {
+            "type": "string"
+          },
+          "runs": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "authority"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "Directory under skills/."
+          },
+          "authority": {
+            "enum": ["L1", "L2", "L3"]
+          },
+          "summary": {
+            "type": "string",
+            "description": "Goes in CONFIG.md [skills]."
+          },
+          "riskGate": {
+            "type": "object",
+            "description": "Required for any skill above L1. Surfaced before the first privileged action.",
+            "additionalProperties": false,
+            "properties": {
+              "combination": {
+                "type": "string",
+                "description": "The risky pattern, e.g. \"untrusted-input + external-mutation\"."
+              },
+              "prompt": {
+                "type": "string",
+                "description": "Shown verbatim. Plain language, honest about what could go wrong."
+              },
+              "scope": {
+                "type": "string",
+                "description": "Recorded in CONFIG.md [authority-grants]."
+              },
+              "onDecline": {
+                "enum": ["dry-run", "skip"],
+                "default": "skip",
+                "description": "dry-run reports what it would do and changes nothing."
+              },
+              "sameAs": {
+                "type": "string",
+                "description": "Reuse another skill's gate; ask once, cover both."
+              }
+            }
+          }
+        }
+      }
+    },
+    "memory": {
+      "type": "array",
+      "description": "Files seeded into <vault>/memory/ on install.",
+      "items": {
+        "type": "object",
+        "required": ["file"],
+        "additionalProperties": false,
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Destination name under memory/."
+          },
+          "from": {
+            "type": "string",
+            "description": "Source path within the pack, for files shipped verbatim."
+          },
+          "template": {
+            "type": "boolean",
+            "description": "Write a commented template for the user to fill in. Never invent data."
+          },
+          "empty": {
+            "type": "boolean",
+            "description": "Create empty — ledgers and append-only logs."
+          },
+          "ifAbsent": {
+            "type": "boolean",
+            "default": true,
+            "description": "Never overwrite; the user may have tuned it."
+          },
+          "note": {
+            "type": "string",
+            "description": "Guidance for the installing agent, not the user."
+          }
+        }
+      }
+    },
+    "connectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "required"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean",
+            "description": "false means the pack degrades gracefully — say how."
+          },
+          "why": {
+            "type": "string",
+            "description": "Told to the user when prompting them to connect it."
+          }
+        }
+      }
+    },
+    "schedules": {
+      "type": "array",
+      "description": "Cadences to walk the user through via /schedule. CONFIG.md [scheduled-tasks] records intent and is NOT an executor.",
+      "items": {
+        "type": "object",
+        "required": ["skill", "suggest"],
+        "additionalProperties": false,
+        "properties": {
+          "skill": {
+            "type": "string"
+          },
+          "suggest": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "docs": {
+      "type": "string",
+      "description": "Repo-relative path to the pack's end-user guide."
+    },
+    "extensions": {
+      "type": "array",
+      "description": "MCP bundles (.mcpb) this pack needs. These install into Claude Desktop, NOT into the vault — a vault is data a session reads, an extension is a process Claude launches. bootstrap-vault checks for the named tools and guides the user through installing anything missing.",
+      "items": {
+        "type": "object",
+        "required": ["name", "required", "provides"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Bundle name, e.g. \"gmail-attachments\"."
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean",
+            "description": "false means the pack degrades — say what stops working."
+          },
+          "provides": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tool names it contributes. Used to detect whether it is already installed."
+          },
+          "why": {
+            "type": "string",
+            "description": "Told to the user when prompting them to install it."
+          },
+          "setupDoc": {
+            "type": "string",
+            "description": "Where the install and authorization steps live."
+          },
+          "alternativeTo": {
+            "type": "string",
+            "description": "What the pack falls back to when this is absent."
+          }
+        }
+      }
+    },
+    "firstRun": {
+      "type": "object",
+      "description": "A skill to offer the moment the pack finishes installing — the bridge between 'installed' and 'useful'. For a pack adopted mid-work, this is usually an importer that finds what already exists.",
+      "required": ["skill", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": {
+          "type": "string"
+        },
+        "why": {
+          "type": "string",
+          "description": "One line, in the user's terms, for why it is worth doing now."
+        },
+        "skipIf": {
+          "type": "string",
+          "description": "Condition under which offering it would be noise, e.g. the registry already having deals."
+        }
+      }
+    }
+  }
+}
